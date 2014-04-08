@@ -5,7 +5,7 @@ using namespace std;
 
 
 template <class T>
-class xvector
+class xvector 
 {
 public:
 	xvector() :
@@ -22,7 +22,7 @@ public:
 		m_buffer = new T[ size];
 	}
 	
-	~xvector() {
+	virtual ~xvector() {
 		delete[] m_buffer;
 		m_buffer = NULL;
 	}
