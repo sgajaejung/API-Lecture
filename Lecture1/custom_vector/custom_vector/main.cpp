@@ -83,5 +83,14 @@ void main()
 	for (int i=0; i < vec.size(); ++i)
 	{
 		cout << vec[ i] << endl;
+
 	}
+
+	vector<int> vv;
+	vector<int>::iterator it = vv.begin();
+	auto it2 = vv.begin();
+
+
+
+
 }
