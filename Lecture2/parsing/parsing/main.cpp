@@ -20,7 +20,6 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
 void main()
 {
 	ifstream ifs("enemy.txt");
-	bool r = ifs.good();
 	string str((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 	cout << str.c_str() << endl;
 
