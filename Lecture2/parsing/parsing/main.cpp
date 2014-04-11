@@ -27,6 +27,7 @@ void main()
 
 		int equalIdx = line.find("=");
 		string first = line.substr(0, equalIdx);
+		std::remove(first.begin(), first.end(), '\n');
 		//cout << "first " << first.c_str() << endl;
 		
 		string second = line.substr(equalIdx+1);
