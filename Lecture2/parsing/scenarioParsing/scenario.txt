@@ -1,0 +1,18 @@
+
+scenarioName stage1
+{
+	time = 3, enemy1, 100, -10;
+	time = 5, enemy2, 200, -10;
+	time = 6, enemy3, 300, -10;
+	
+};
+
+
+scenarioName stage2
+{
+	time = 1, enemy4, 100, -10;
+	time = 2, enemy5, 200, -10;
+	time = 6, enemy6, 300, -10;
+	
+};
+

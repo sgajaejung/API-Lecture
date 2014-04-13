@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "complex_parsing", "complex_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bulletParsing", "bulletParsing\bulletParsing.vcxproj", "{CEBC33FD-1733-41D2-B2A2-4FE5984C3685}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scenarioParsing", "scenarioParsing\scenarioParsing.vcxproj", "{8E61B603-1145-48A3-BC32-101FBD876D72}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -25,6 +27,10 @@ Global
 		{CEBC33FD-1733-41D2-B2A2-4FE5984C3685}.Debug|Win32.Build.0 = Debug|Win32
 		{CEBC33FD-1733-41D2-B2A2-4FE5984C3685}.Release|Win32.ActiveCfg = Release|Win32
 		{CEBC33FD-1733-41D2-B2A2-4FE5984C3685}.Release|Win32.Build.0 = Release|Win32
+		{8E61B603-1145-48A3-BC32-101FBD876D72}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8E61B603-1145-48A3-BC32-101FBD876D72}.Debug|Win32.Build.0 = Debug|Win32
+		{8E61B603-1145-48A3-BC32-101FBD876D72}.Release|Win32.ActiveCfg = Release|Win32
+		{8E61B603-1145-48A3-BC32-101FBD876D72}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

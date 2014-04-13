@@ -47,6 +47,7 @@ struct sBullet
 			speed = rhs.speed;
 			image = rhs.image;
 			bound = rhs.bound;
+			conflict = rhs.conflict;
 			fires = rhs.fires;
 		}
 		return *this;
@@ -210,7 +211,7 @@ int parseBullet( const string &script, int startPos, sBullet &bullet )
 	if (string::npos == nPos)
 		return nPos;
 	nPos += header.length();
-	bullet.name = script.substr( nPos, script.find("\n") - nPos );
+	bullet.name = trim(script.substr( nPos, script.find("\n", nPos) - nPos ));
 
 	int pos = script.find("{", startPos) + 1;
 	while (1)
@@ -222,12 +223,10 @@ int parseBullet( const string &script, int startPos, sBullet &bullet )
 		const string line = script.substr(pos, fidx-pos);
 		string first, second;
 		splitString(line, "=", first, second);
-		trim(first);
-		trim(second);
 
 		pos = fidx+1;
 
-		if (!parseKeyValue(first, second, bullet))
+		if (!parseKeyValue(trim(first), trim(second), bullet))
 			break;
 	}
 

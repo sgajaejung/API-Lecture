@@ -1,3 +1,4 @@
+
 EnemyName enemy1
 {
 	life = 100;
