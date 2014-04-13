@@ -12,7 +12,7 @@ scenarioName stage2
 {
 	time = 1, enemy4, 100, -10;
 	time = 2, enemy5, 200, -10;
-	time = 6, enemy6, 300, -10;
+	time = 3, enemy6, 300, -10;
 	
 };
 
