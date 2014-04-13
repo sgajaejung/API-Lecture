@@ -192,8 +192,8 @@ int parseEnemy( const string &script, int startPos, sEnemy &enemy )
 {
 	const string header = "EnemyName";
 	int nPos = script.find(header, startPos);
-	if ((string::npos == nPos) || (nPos < 0))
-		return -1;
+	if (string::npos == nPos)
+		return nPos;
 	nPos += header.length();
 	enemy.name = script.substr( nPos, script.find("\n") - nPos );
 
@@ -201,7 +201,7 @@ int parseEnemy( const string &script, int startPos, sEnemy &enemy )
 	while (1)
 	{
 		const int fidx = script.find(";", pos);
-		if ((string::npos == pos) || (fidx < 0))
+		if ((string::npos == pos) || (string::npos == fidx))
 			break;
 
 		const string line = script.substr(pos, fidx-pos);
@@ -234,9 +234,10 @@ void main()
 	while (1)
 	{
 		sEnemy enemy;
-		if (0 < (pos = parseEnemy(str, pos, enemy)))
+		if (string::npos != (pos = parseEnemy(str, pos, enemy)))
 			enemies.push_back(enemy);
 		else
 			break;
 	}
+
 }

@@ -6,6 +6,7 @@ class cParent
 public:
 	cParent() {
 		cout << "cParent()" << endl;
+		cout << "init cParent::func()" << endl;			
 	}
 	virtual ~cParent() {
 		cout << "~cParent()" << endl;
@@ -20,6 +21,7 @@ class cChild : public cParent
 public:
 	cChild() {
 		cout << "cChild()" << endl;
+		cout << "init cChild::func()" << endl;
 	}
 	virtual ~cChild() {
 		cout << "~cChild()" << endl;
