@@ -26,7 +26,7 @@ public:
 	virtual ~cChild() {
 		cout << "~cChild()" << endl;
 	}
-	virtual void func() {
+	virtual void func() override {
 		cout << "cChild func()" << endl;
 	}
 };
