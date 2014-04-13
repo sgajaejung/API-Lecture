@@ -1,0 +1,32 @@
+
+bulletName bullet1
+{
+	damage = 10;
+	speed = 10;
+	image = misile;
+	boundingBox = 10,10;
+	bullet_conflict = 1;
+	fire = 
+	{
+		direct 1,1
+		delay 1
+		direct 1,1
+	};
+};
+
+
+bulletName bullet2
+{
+	damage = 5;
+	speed = 8;
+	image = bullet;
+	boundingBox = 5,5;
+	bullet_conflict = 0;
+	fire = 
+	{
+		direct 1,1
+	};
+
+};
+
+
