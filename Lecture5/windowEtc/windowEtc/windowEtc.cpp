@@ -191,7 +191,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			case VK_RETURN:
 				//SendMessage(hWnd, CUSTOM_MESSAGE, 0, 0);
-				PostMessage(hWnd, CUSTOM_MESSAGE, 0, 0);
+				//PostMessage(hWnd, CUSTOM_MESSAGE, 0, 0);
+				//SendMessage(hWnd, WM_PAINT, 0, 0);
 				break;
 			}
 		}
