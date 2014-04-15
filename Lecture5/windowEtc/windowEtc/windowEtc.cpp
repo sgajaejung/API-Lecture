@@ -1,11 +1,8 @@
-// WindowPenBrush.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
+// windowEtc.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
 //
 
 #include "stdafx.h"
-#include "WindowPenBrush.h"
-#include <math.h>
-#include <windowsx.h>
-#include <vector>
+#include "windowEtc.h"
 
 #define MAX_LOADSTRING 100
 
@@ -13,24 +10,21 @@
 HINSTANCE hInst;								// 현재 인스턴스입니다.
 TCHAR szTitle[MAX_LOADSTRING];					// 제목 표시줄 텍스트입니다.
 TCHAR szWindowClass[MAX_LOADSTRING];			// 기본 창 클래스 이름입니다.
-HPEN g_hPen;
-HBRUSH g_hBrush;
-bool g_lbtnDown = false;
-POINT g_downPos;
-POINT g_movePos;
-
-struct sLine {
-	int state; // 0=down, 1=move, 2=up
-	POINT pos;
-};
-std::vector<sLine> g_Lines; // 선그리기
-
+HWND g_hWnd;
 
 // 이 코드 모듈에 들어 있는 함수의 정방향 선언입니다.
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
+
+VOID CALLBACK TimerProc(
+	_In_  HWND hwnd,
+	_In_  UINT uMsg,
+	_In_  UINT_PTR idEvent,
+	_In_  DWORD dwTime
+	);
+
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -46,29 +40,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	// 전역 문자열을 초기화합니다.
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-	LoadString(hInstance, IDC_WINDOWPENBRUSH, szWindowClass, MAX_LOADSTRING);
+	LoadString(hInstance, IDC_WINDOWETC, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
-
-
-	//--------------------------------------------------------------------------------------------------
-	// 펜 생성.
-	g_hPen = CreatePen(
-		PS_SOLID,	// 펜 타입 ex) PS_SOLID, PS_DASH, PS_DOT
-		1,				// 펜 폭
-		RGB(255,0,0) ); // 색깔.
-
-
-	//--------------------------------------------------------------------------------------------------
-	// 브러쉬 생성
-
-	// 영역을 채우는 브러쉬
-	//g_hBrush = CreateSolidBrush(RGB(0,0,255)); 
-
-	// 줄선으로 채우는 브러쉬
-	g_hBrush = CreateHatchBrush(
-		HS_BDIAGONAL, // ex) HS_CROSS, HS_BDIAGONAL ...
-		RGB(0,0,255)); 
-
 
 	// 응용 프로그램 초기화를 수행합니다.
 	if (!InitInstance (hInstance, nCmdShow))
@@ -76,7 +49,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWPENBRUSH));
+	SetTimer(g_hWnd, 11, 1000, TimerProc);
+
+	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWETC));
 
 	// 기본 메시지 루프입니다.
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -87,9 +62,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			DispatchMessage(&msg);
 		}
 	}
-
-
-	DeleteObject(g_hPen);
 
 	return (int) msg.wParam;
 }
@@ -120,10 +92,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	wcex.cbClsExtra		= 0;
 	wcex.cbWndExtra		= 0;
 	wcex.hInstance		= hInstance;
-	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINDOWPENBRUSH));
+	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINDOWETC));
 	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_WINDOWPENBRUSH);
+	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_WINDOWETC);
 	wcex.lpszClassName	= szWindowClass;
 	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -146,7 +118,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
-   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   g_hWnd = hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
@@ -187,8 +159,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_ABOUT:
 			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 			break;
-		case ID_TEST1:
-			break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
 			break;
@@ -196,113 +166,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return DefWindowProc(hWnd, message, wParam, lParam);
 		}
 		break;
-	
 	case WM_PAINT:
-		{
-			hdc = BeginPaint(hWnd, &ps);
-
-			SetTextColor(hdc, RGB(255,0,0));	// 텍스트 색깔 지정
-			//SetBkColor(hdc, RGB(0,255,0)); // 텍스트 배경 색깔 지정
-
-			TextOutA( hdc, 10, 10, "hello World", 11);	// x,y 위치에 텍스트 출력
-			RECT r;
-			SetRect(&r, 100, 100, 200, 200);	
-			DrawTextA( hdc, "hello World", 11, &r, DT_CENTER); //사각형 위치에  텍스트 출력
-
-			HPEN oldPen = (HPEN)SelectObject(hdc, g_hPen); // Pen 적용
-
-			// 라인 긋기.
-			LineTo(hdc, 100, 100);
-			LineTo(hdc, 500, 100);
-			MoveToEx(hdc, 500, 200, NULL);
-			LineTo(hdc, 600, 300);
-
-			HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, g_hBrush); // 브러쉬 적용.
-
-			Rectangle(hdc, 300, 300, 400, 400);	// 박스 출력
-			Ellipse(hdc, 400, 300, 500, 400);	// 타원형 출력
-
-			// sin 곡선
-			MoveToEx(hdc, 0, 300, NULL);
-			for (float i=0; i < 10; i+=0.1f)
-			{
-				float y = sin(i) * 100;
-				LineTo(hdc, (int)(i*100.f), (int)(y + 300.f));
-			}
-
-			if (g_lbtnDown)
-			{
-				//MoveToEx(hdc, g_downPos.x, g_downPos.y, NULL);
-				//LineTo(hdc, g_movePos.x, g_movePos.y);
-			}
-
-			for (int i=0; i < (int)g_Lines.size(); ++i)
-			{
-				if (g_Lines[ i].state == 0)
-					MoveToEx(hdc, g_Lines[ i].pos.x, g_Lines[ i].pos.y, NULL);
-				else if (g_Lines[ i].state == 1)
-					LineTo(hdc, g_Lines[ i].pos.x, g_Lines[ i].pos.y);
-			}
-			
-			SelectObject(hdc, oldPen); // 원본 Pen으로 복귀.
-			SelectObject(hdc, oldBrush); // 원본 Brush로 복귀
-			EndPaint(hWnd, &ps);
-		}
+		hdc = BeginPaint(hWnd, &ps);
+		// TODO: 여기에 그리기 코드를 추가합니다.
+		EndPaint(hWnd, &ps);
 		break;
-
-	// 마우스 왼쪽 버튼 다운 이벤트
-	case WM_LBUTTONDOWN:
-		{
-			g_lbtnDown = true;
-			g_downPos.x = GET_X_LPARAM(lParam); 
-			g_downPos.y = GET_Y_LPARAM(lParam); 
-
-			sLine line;
-			line.state = 0;
-			line.pos = g_downPos;
-			g_Lines.push_back(line);
-		}
-		break;
-
-	// 마우스 왼쪽 버튼 업 이벤트
-	case WM_LBUTTONUP:
-		{
-			g_lbtnDown = false;
-
-			sLine line;
-			line.state = 2;
-			g_Lines.push_back(line);
-		}
-		break;
-
-	// 마우스 이동 이벤트 
-	case WM_MOUSEMOVE:
-		if (g_lbtnDown)
-		{
-			POINT pos;
-			pos.x = GET_X_LPARAM(lParam); 
-			pos.y = GET_Y_LPARAM(lParam); 
-			g_movePos = pos;
-			InvalidateRect(hWnd, NULL, TRUE);
-
-			sLine line;
-			line.state = 1;
-			line.pos = pos;
-			g_Lines.push_back(line);
-		}
-		break;
-
-	// 키보드 다운
+		
 	case WM_KEYDOWN:
+		{
+			switch (wParam)
+			{
+			case VK_SPACE: // 스페이스바 키를 누르면 호출된다.
+				// 메세지 박스를 띄운다. Yes/No 버튼이 출력된다.
+				if (IDYES == ::MessageBoxA(hWnd, "msg", "confirm", MB_YESNO))
+				{
+					// Yes 버튼을 누르면 다시 메세지박스를 띄운다.
+					::MessageBoxA(hWnd, "yes", "ok", MB_OK);
+				}
+				break;
+			}
+		}
 		break;
-	
-	//case WM_ERASEBKGND:
-		//return 0;
+
+	case WM_TIMER:
+		if (wParam == 0)
+		{
+
+		}
+		break;
 
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
-
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
@@ -328,3 +223,15 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return (INT_PTR)FALSE;
 }
+
+
+VOID CALLBACK TimerProc(
+	_In_  HWND hwnd,
+	_In_  UINT uMsg,
+	_In_  UINT_PTR idEvent,
+	_In_  DWORD dwTime
+	)
+{
+
+}
+
