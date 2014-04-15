@@ -151,7 +151,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps; // 페인트 구조체
 	HDC hdc; // Device Context 핸들
 
-
 	// WM_~  WindowMessage 의 약자.
 	switch (message)
 	{
