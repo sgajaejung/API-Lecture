@@ -1,20 +1,9 @@
-// StopFlicker.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
+// Shooting.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
 //
 
 #include "stdafx.h"
-#include "StopFlicker.h"
-#include <windowsx.h>
-#include <vector>
-
-
-struct sLine {
-	int state; // 0=down, 1=move, 2=up
-	POINT pos;
-};
-std::vector<sLine> g_Lines; // 선그리기
-bool g_lbtnDown = false;
-HBRUSH g_brush;
-
+#include "Shooting.h"
+#include <algorithm>
 
 #define MAX_LOADSTRING 100
 
@@ -22,13 +11,21 @@ HBRUSH g_brush;
 HINSTANCE hInst;								// 현재 인스턴스입니다.
 TCHAR szTitle[MAX_LOADSTRING];					// 제목 표시줄 텍스트입니다.
 TCHAR szWindowClass[MAX_LOADSTRING];			// 기본 창 클래스 이름입니다.
+HWND g_hWnd;
+POINT g_heroPos = {300,400};
+
+
+#define SETRECT(r,x,y,w,h) { SetRect(&r, x, y, x+w, y+h); }
+#define SETCRECT(r,x,y,w,h) { SetRect(&r, x-(w/2), y-(h/2), x+(w/2), y+(h/2)); }
+
+
 
 // 이 코드 모듈에 들어 있는 함수의 정방향 선언입니다.
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
-
+void					Render(HDC hdc);
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -44,10 +41,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	// 전역 문자열을 초기화합니다.
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-	LoadString(hInstance, IDC_STOPFLICKER, szWindowClass, MAX_LOADSTRING);
+	LoadString(hInstance, IDC_SHOOTING, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
-
-	g_brush = CreateSolidBrush(GetSysColor(COLOR_WINDOW));
 
 	// 응용 프로그램 초기화를 수행합니다.
 	if (!InitInstance (hInstance, nCmdShow))
@@ -55,7 +50,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_STOPFLICKER));
+	SetTimer(g_hWnd, 11, 1000, NULL);
+
+	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_SHOOTING));
 
 	// 기본 메시지 루프입니다.
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -66,8 +63,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			DispatchMessage(&msg);
 		}
 	}
-
-	DeleteObject(g_brush);
 
 	return (int) msg.wParam;
 }
@@ -98,10 +93,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	wcex.cbClsExtra		= 0;
 	wcex.cbWndExtra		= 0;
 	wcex.hInstance		= hInstance;
-	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_STOPFLICKER));
+	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SHOOTING));
 	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_STOPFLICKER);
+	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_SHOOTING);
 	wcex.lpszClassName	= szWindowClass;
 	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -124,7 +119,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
-   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   g_hWnd = hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
@@ -163,6 +158,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wmId)
 		{
 		case IDM_ABOUT:
+			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 			break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
@@ -172,73 +168,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 
-	case WM_ERASEBKGND:
-		return 0;
-
 	case WM_PAINT:
-		{
-			hdc = BeginPaint(hWnd, &ps);
-
-			RECT rc;
-			GetClientRect(hWnd, &rc);
-			HDC memDc = CreateCompatibleDC(hdc);
-			HBITMAP bmp = CreateCompatibleBitmap(hdc, rc.right-rc.left, rc.bottom-rc.top);
-			HBITMAP oldBmp = (HBITMAP)SelectObject(memDc, bmp);
-			FillRect(memDc, &rc, g_brush);
-
-			for (int i=0; i < (int)g_Lines.size(); ++i)
-			{
-				if (g_Lines[ i].state == 0)
-					MoveToEx(memDc, g_Lines[ i].pos.x, g_Lines[ i].pos.y, NULL);
-				else if (g_Lines[ i].state == 1)
-					LineTo(memDc, g_Lines[ i].pos.x, g_Lines[ i].pos.y);
-			}
-
-			BitBlt(hdc, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, memDc, 0, 0, SRCCOPY);
-			SelectObject(memDc, oldBmp);
-			DeleteObject(bmp);
-			DeleteDC(memDc);
-			EndPaint(hWnd, &ps);
-		}
+		hdc = BeginPaint(hWnd, &ps);
+		Render(hdc);
+		EndPaint(hWnd, &ps);
 		break;
 
-
-		// 마우스 왼쪽 버튼 다운 이벤트
-	case WM_LBUTTONDOWN:
-		{
-			g_lbtnDown = true;
-			POINT pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-			sLine line;
-			line.state = 0;
-			line.pos = pos;
-			g_Lines.push_back(line);
-		}
+	case WM_TIMER:
 		break;
 
-		// 마우스 왼쪽 버튼 업 이벤트
-	case WM_LBUTTONUP:
+	case WM_KEYDOWN:
+		switch (wParam)
 		{
-			g_lbtnDown = false;
-
-			sLine line;
-			line.state = 2;
-			g_Lines.push_back(line);
-		}
-		break;
-
-		// 마우스 이동 이벤트 
-	case WM_MOUSEMOVE:
-		if (g_lbtnDown)
-		{
-			POINT pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+		case VK_LEFT:
+			g_heroPos.x -= 4;
 			InvalidateRect(hWnd, NULL, TRUE);
+			break;
 
-			sLine line;
-			line.state = 1;
-			line.pos = pos;
-			g_Lines.push_back(line);
+		case VK_RIGHT:
+			g_heroPos.x += 4;
+			InvalidateRect(hWnd, NULL, TRUE);
+			break;
 		}
 		break;
+
+	case  WM_ERASEBKGND:
+		return 0;
 
 	case WM_DESTROY:
 		PostQuitMessage(0);
@@ -247,4 +202,55 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
+}
+
+// 정보 대화 상자의 메시지 처리기입니다.
+INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		return (INT_PTR)TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
+
+/**
+ @brief 
+ @date 2014-04-16
+*/
+void	Render(HDC hdc)
+{
+	RECT rc;
+	GetClientRect(g_hWnd, &rc);
+	HDC memDc = CreateCompatibleDC(hdc);
+	HBITMAP bmp = CreateCompatibleBitmap(hdc, rc.right-rc.left, rc.bottom-rc.top);
+	HBITMAP oldBmp = (HBITMAP)SelectObject(memDc, bmp);
+	FillRect(memDc, &rc, (HBRUSH)(COLOR_WINDOW+1));
+
+
+	RECT heroR;
+	SETCRECT(heroR, g_heroPos.x, g_heroPos.y, 30, 30);
+	Rectangle(memDc, heroR.left, heroR.top, heroR.right, heroR.bottom);
+
+	//RECT r;
+	//if (IntersectRect(&r, &heroR, &heroR))
+	//{
+	//	int a =0;
+	//}
+
+	BitBlt(hdc, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, memDc, 0, 0, SRCCOPY);
+	SelectObject(memDc, oldBmp);
+	DeleteObject(bmp);
+	DeleteDC(memDc);
 }

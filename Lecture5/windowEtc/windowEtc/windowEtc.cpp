@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "windowEtc.h"
+#include <math.h>
 
 #define MAX_LOADSTRING 100
 
@@ -15,6 +16,7 @@ HINSTANCE hInst;								// 현재 인스턴스입니다.
 TCHAR szTitle[MAX_LOADSTRING];					// 제목 표시줄 텍스트입니다.
 TCHAR szWindowClass[MAX_LOADSTRING];			// 기본 창 클래스 이름입니다.
 HWND g_hWnd;
+float g_initAngle = 0;
 
 // 이 코드 모듈에 들어 있는 함수의 정방향 선언입니다.
 ATOM				MyRegisterClass(HINSTANCE hInstance);
@@ -53,7 +55,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	SetTimer(g_hWnd, 11, 1000, TimerProc);
+	SetTimer(g_hWnd, 11, 10, TimerProc);
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWETC));
 
@@ -173,6 +175,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 		// TODO: 여기에 그리기 코드를 추가합니다.
+
+		MoveToEx(hdc, 400, 300, NULL);
+		for (float i=0; i < 6.3f; i+=0.1f)
+		{
+			const float x = cos(i) * 100.f;
+			const float y = sin(i) * 100.f;
+			LineTo(hdc, (int)x+300, (int)y+300);
+		}
+
+		for (float i=0; i < 10; i+=0.1f)
+		{
+			const float y = cos(i+g_initAngle) * 100.f;
+			POINT pos = {(int)(i*100.f)+300, (int)-y+300};
+			if (i==0)
+				MoveToEx(hdc, pos.x, pos.y,NULL);
+			LineTo(hdc, pos.x, pos.y);
+		}
+
+		MoveToEx(hdc, 300,300,NULL);
+		for (float i=0; i < 10; i+=0.1f)
+		{
+			const float y = sin(i+g_initAngle) * 100.f;
+			POINT pos = {(int)(i*100.f)+300, (int)-y+300};
+			if (i==0)
+				MoveToEx(hdc, pos.x, pos.y,NULL);
+			LineTo(hdc, pos.x, pos.y);
+		}
+
 		EndPaint(hWnd, &ps);
 		break;
 		
@@ -248,6 +278,6 @@ VOID CALLBACK TimerProc(
 	_In_  DWORD dwTime
 	)
 {
-
+	g_initAngle += 0.03f;
+	InvalidateRect(g_hWnd, NULL, TRUE);
 }
-
