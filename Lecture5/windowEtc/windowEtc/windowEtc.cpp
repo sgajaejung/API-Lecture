@@ -6,6 +6,10 @@
 
 #define MAX_LOADSTRING 100
 
+#define CUSTOM_MESSAGE (WM_USER + 1)
+
+
+
 // 전역 변수:
 HINSTANCE hInst;								// 현재 인스턴스입니다.
 TCHAR szTitle[MAX_LOADSTRING];					// 제목 표시줄 텍스트입니다.
@@ -184,7 +188,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					::MessageBoxA(hWnd, "yes", "ok", MB_OK);
 				}
 				break;
+
+			case VK_RETURN:
+				//SendMessage(hWnd, CUSTOM_MESSAGE, 0, 0);
+				PostMessage(hWnd, CUSTOM_MESSAGE, 0, 0);
+				break;
 			}
+		}
+		break;
+
+	case CUSTOM_MESSAGE:
+		{
+			int a = 0;
 		}
 		break;
 
