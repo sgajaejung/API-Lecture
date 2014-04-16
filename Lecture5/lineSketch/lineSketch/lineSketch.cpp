@@ -1,34 +1,25 @@
-// windowEtc.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
+// lineSketch.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
 //
 
 #include "stdafx.h"
-#include "windowEtc.h"
-#include <math.h>
+#include "lineSketch.h"
+#include <WindowsX.h>
+
 
 #define MAX_LOADSTRING 100
-
-#define CUSTOM_MESSAGE (WM_USER + 1)
 
 // 전역 변수:
 HINSTANCE hInst;								// 현재 인스턴스입니다.
 TCHAR szTitle[MAX_LOADSTRING];					// 제목 표시줄 텍스트입니다.
 TCHAR szWindowClass[MAX_LOADSTRING];			// 기본 창 클래스 이름입니다.
-HWND g_hWnd;
-float g_initAngle = 0;
+bool g_lbtnDown = false;
+
 
 // 이 코드 모듈에 들어 있는 함수의 정방향 선언입니다.
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
-
-VOID CALLBACK TimerProc(
-	_In_  HWND hwnd,
-	_In_  UINT uMsg,
-	_In_  UINT_PTR idEvent,
-	_In_  DWORD dwTime
-	);
-
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -44,7 +35,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	// 전역 문자열을 초기화합니다.
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-	LoadString(hInstance, IDC_WINDOWETC, szWindowClass, MAX_LOADSTRING);
+	LoadString(hInstance, IDC_LINESKETCH, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
 	// 응용 프로그램 초기화를 수행합니다.
@@ -53,9 +44,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	SetTimer(g_hWnd, 11, 10, TimerProc);
-
-	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWETC));
+	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LINESKETCH));
 
 	// 기본 메시지 루프입니다.
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -96,10 +85,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	wcex.cbClsExtra		= 0;
 	wcex.cbWndExtra		= 0;
 	wcex.hInstance		= hInstance;
-	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINDOWETC));
+	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_LINESKETCH));
 	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_WINDOWETC);
+	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_LINESKETCH);
 	wcex.lpszClassName	= szWindowClass;
 	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -122,7 +111,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
-   g_hWnd = hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
@@ -173,68 +162,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 		// TODO: 여기에 그리기 코드를 추가합니다.
-
-		MoveToEx(hdc, 400, 300, NULL);
-		for (float i=0; i < 6.3f; i+=0.1f)
-		{
-			const float x = cos(i) * 100.f;
-			const float y = sin(i) * 100.f;
-			LineTo(hdc, (int)x+300, (int)y+300);
-		}
-
-		for (float i=0; i < 10; i+=0.1f)
-		{
-			const float y = cos(i+g_initAngle) * 100.f;
-			POINT pos = {(int)(i*100.f)+300, (int)-y+300};
-			if (i==0)
-				MoveToEx(hdc, pos.x, pos.y,NULL);
-			LineTo(hdc, pos.x, pos.y);
-		}
-
-		MoveToEx(hdc, 300,300,NULL);
-		for (float i=0; i < 10; i+=0.1f)
-		{
-			const float y = sin(i+g_initAngle) * 100.f;
-			POINT pos = {(int)(i*100.f)+300, (int)-y+300};
-			if (i==0)
-				MoveToEx(hdc, pos.x, pos.y,NULL);
-			LineTo(hdc, pos.x, pos.y);
-		}
-
 		EndPaint(hWnd, &ps);
 		break;
-		
-	case WM_KEYDOWN:
-		{
-			switch (wParam)
-			{
-			case VK_SPACE: // 스페이스바 키를 누르면 호출된다.
-				// 메세지 박스를 띄운다. Yes/No 버튼이 출력된다.
-				if (IDYES == ::MessageBoxA(hWnd, "msg", "confirm", MB_YESNO))
-				{
-					// Yes 버튼을 누르면 다시 메세지박스를 띄운다.
-					::MessageBoxA(hWnd, "yes", "ok", MB_OK);
-				}
-				break;
 
-			case VK_RETURN:
-				//SendMessage(hWnd, CUSTOM_MESSAGE, 0, 0);
-				//PostMessage(hWnd, CUSTOM_MESSAGE, 0, 0);
-				//SendMessage(hWnd, WM_PAINT, 0, 0);
-				break;
-			}
+
+		// 마우스 왼쪽 버튼 다운 이벤트
+	case WM_LBUTTONDOWN:
+		{
+			g_lbtnDown = true;
+			POINT pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
 		}
 		break;
 
-	case CUSTOM_MESSAGE:
+		// 마우스 왼쪽 버튼 업 이벤트
+	case WM_LBUTTONUP:
 		{
-			int a = 0;
+			g_lbtnDown = false;
+
 		}
 		break;
 
-	case WM_TIMER:
-		if (wParam == 0)
+		// 마우스 이동 이벤트 
+	case WM_MOUSEMOVE:
+		if (g_lbtnDown)
 		{
+			POINT pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+			InvalidateRect(hWnd, NULL, TRUE);
 
 		}
 		break;
@@ -266,16 +219,4 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	return (INT_PTR)FALSE;
-}
-
-
-VOID CALLBACK TimerProc(
-	_In_  HWND hwnd,
-	_In_  UINT uMsg,
-	_In_  UINT_PTR idEvent,
-	_In_  DWORD dwTime
-	)
-{
-	g_initAngle += 0.03f;
-	InvalidateRect(g_hWnd, NULL, TRUE);
 }
