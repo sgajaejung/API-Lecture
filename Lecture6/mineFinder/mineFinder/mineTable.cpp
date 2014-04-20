@@ -279,7 +279,8 @@ bool cMineTable::Erase(const POINT &pos)
 
 				if (IsBlock(m_table[ xy.x][ xy.y].type) && !IsCheck(m_table[ xy.x][ xy.y].type))
 				{
-					ExpandBlank(xy.x, xy.y);
+					POINT npos = {xy.x*WIDTH + m_tableOffset.x, xy.y*WIDTH + m_tableOffset.y};
+					Click(npos);
 				}
 			}
 		}
