@@ -95,17 +95,17 @@ void cMineTable::Init(bool newTable) // newTable=true
 */
 void cMineTable::Render(HDC hdc)
 {
-	for (int i=0; i < 11; ++i)
-	{
-		MoveToEx(hdc, m_tableOffset.x, m_tableOffset.y+i*WIDTH, NULL);
-		LineTo(hdc, m_tableOffset.x+WIDTH*10, m_tableOffset.y+i*WIDTH);
-	}
+	//for (int i=0; i < 11; ++i)
+	//{
+	//	MoveToEx(hdc, m_tableOffset.x, m_tableOffset.y+i*WIDTH, NULL);
+	//	LineTo(hdc, m_tableOffset.x+WIDTH*10, m_tableOffset.y+i*WIDTH);
+	//}
 
-	for (int i=0; i < 11; ++i)
-	{
-		MoveToEx(hdc, m_tableOffset.x + i*WIDTH, m_tableOffset.y, NULL);
-		LineTo(hdc, m_tableOffset.x + i*WIDTH, m_tableOffset.y + WIDTH*10);
-	}
+	//for (int i=0; i < 11; ++i)
+	//{
+	//	MoveToEx(hdc, m_tableOffset.x + i*WIDTH, m_tableOffset.y, NULL);
+	//	LineTo(hdc, m_tableOffset.x + i*WIDTH, m_tableOffset.y + WIDTH*10);
+	//}
 
 	
 	for (int i=0; i < MAX_TABLE_W; ++i)
@@ -140,12 +140,8 @@ void cMineTable::Render(HDC hdc)
 					std::stringstream ss;
 					switch (type)
 					{
-					case NUMBER:
-						ss << m_table[ i][ k].value;
-						break;
-					case MINE:
-						ss << "@";
-						break;
+					case NUMBER: ss << m_table[ i][ k].value; break;
+					case MINE: ss << "@"; break;
 					}
 					string str = ss.str();
 
