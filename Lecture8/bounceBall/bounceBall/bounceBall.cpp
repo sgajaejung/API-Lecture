@@ -8,7 +8,6 @@
 using namespace Gdiplus;
 #pragma comment( lib, "gdiplus.lib" ) 
 
-
 #define MAX_LOADSTRING 100
 
 // 전역 변수:
@@ -20,21 +19,23 @@ TCHAR szWindowClass[MAX_LOADSTRING];			// 기본 창 클래스 이름입니다.
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
+// Gdiplus 용 
 GdiplusStartupInput g_gdiplusStartupInput; 
 ULONG_PTR g_gdiplusToken;
 Graphics *g_graphics;
-Pen *g_pen;
+Pen *g_pen; // 펜 객체.
 
+
+// 2차원 벡터 구조체.
 struct sVector
 {
 	float x,y;
 };
-sVector g_ballPos = {300,300};
-sVector g_ballVel;
+sVector g_ballPos = {300,300}; // 볼 위치
+sVector g_ballVel; // 볼 속력
 
-
+// Gdiplus 초기화.
 void InitGdiPlus(HWND hWnd)
 {
 	//Start Gdiplus 
@@ -43,6 +44,7 @@ void InitGdiPlus(HWND hWnd)
 	g_pen = new Pen(Color::Red);
 }
 
+// Gdiplus 제거.
 void ReleaseGdiPlus()
 {
 	delete g_graphics;
@@ -86,25 +88,11 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		}
 	}
 
-	ReleaseGdiPlus();
+	ReleaseGdiPlus(); // Gdiplus 제거.
 	return (int) msg.wParam;
 }
 
 
-
-//
-//  함수: MyRegisterClass()
-//
-//  목적: 창 클래스를 등록합니다.
-//
-//  설명:
-//
-//    Windows 95에서 추가된 'RegisterClassEx' 함수보다 먼저
-//    해당 코드가 Win32 시스템과 호환되도록
-//    하려는 경우에만 이 함수를 사용합니다. 이 함수를 호출해야
-//    해당 응용 프로그램에 연결된
-//    '올바른 형식의' 작은 아이콘을 가져올 수 있습니다.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
 	WNDCLASSEX wcex;
@@ -126,16 +114,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	return RegisterClassEx(&wcex);
 }
 
-//
-//   함수: InitInstance(HINSTANCE, int)
-//
-//   목적: 인스턴스 핸들을 저장하고 주 창을 만듭니다.
-//
-//   설명:
-//
-//        이 함수를 통해 인스턴스 핸들을 전역 변수에 저장하고
-//        주 프로그램 창을 만든 다음 표시합니다.
-//
+
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    HWND hWnd;
@@ -150,11 +129,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
    
-   InitGdiPlus(hWnd);
+   InitGdiPlus(hWnd); // Gdiplus 생성.
 
+   // 초기 Ball 속도 초기화.
    g_ballVel.x = 200;
    g_ballVel.y = 300;
 
+   // 타이머 실행.
    SetTimer(hWnd, 0, 1, NULL);
 
    ShowWindow(hWnd, nCmdShow);
@@ -163,16 +144,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  함수: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  목적: 주 창의 메시지를 처리합니다.
-//
-//  WM_COMMAND	- 응용 프로그램 메뉴를 처리합니다.
-//  WM_PAINT	- 주 창을 그립니다.
-//  WM_DESTROY	- 종료 메시지를 게시하고 반환합니다.
-//
-//
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
@@ -188,7 +160,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wmId)
 		{
 		case IDM_ABOUT:
-			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 			break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
@@ -198,35 +169,45 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 
-	//case WM_ERASEBKGND:
-	//	return 0;
-
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
+		// 볼위치 g_ballPos 에 원을 출력한다.
 		g_graphics->DrawEllipse(g_pen, (int)g_ballPos.x, (int)g_ballPos.y, 100, 100);
 		EndPaint(hWnd, &ps);
 		break;
 
 	case WM_TIMER:
 		{
+			// 타이머 이벤트.
+			// 1초에 1000번 호출하게 했지만, 실제로는 100번정도 호출 된다.
+
+			// WM_TIMER 이벤트 호출 간격을 계산한다.  (초단위)
 			static int oldT = GetTickCount();
 			const int curT = GetTickCount();
 			const int elapseT = curT - oldT;
 			const float eT = (float)elapseT / 1000.f;
 			oldT = curT;
 
+			// 뷰 영역 외곽에 부딪치면 튕겨나가게 한다.
 			RECT cr;
-			GetClientRect(hWnd, &cr);
+			GetClientRect(hWnd, &cr); // 뷰 영역 크기를 얻는다.
+
+			// left, right 충돌 검사, 충돌 했다면 x축 속도 반전.
 			if (((g_ballVel.x < 0) && (cr.left > (int)g_ballPos.x)) || 
 				((g_ballVel.x > 0) && (cr.right < (int)g_ballPos.x)))
 				g_ballVel.x = -g_ballVel.x;
 
+			// top, bottom 충돌 검사, 충돌 했다면 y축 속도 반전.
 			if (((g_ballVel.y < 0) && (cr.top > (int)g_ballPos.y)) || 
 				((g_ballVel.y  > 0) && (cr.bottom < (int)g_ballPos.y)))
 				g_ballVel.y = -g_ballVel.y;
 
+			// 속도 * 경과시간 = 이동 거리.
+			// 볼위치 g_ballPos 에 이동 거리 만큼 값을 추가한다.
 			g_ballPos.x += g_ballVel.x * eT;
 			g_ballPos.y += g_ballVel.y * eT;
+
+			// 화면 리프레쉬
 			::InvalidateRect(hWnd, NULL, TRUE);
 		}
 		break;
@@ -240,22 +221,3 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-// 정보 대화 상자의 메시지 처리기입니다.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	UNREFERENCED_PARAMETER(lParam);
-	switch (message)
-	{
-	case WM_INITDIALOG:
-		return (INT_PTR)TRUE;
-
-	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-		{
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
-		break;
-	}
-	return (INT_PTR)FALSE;
-}
