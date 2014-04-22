@@ -9,14 +9,13 @@
 #include "particle.h"
 
 
-HWND g_hWnd;
-cMineTable g_table;
-cParticleManager g_particleMng;
+HWND g_hWnd;			// 전역 윈도우 핸들
+cMineTable g_table;		// 지뢰 테이블 전역 변수
+cParticleManager g_particleMng; // 파티클 관리자 (중요하지 않음)
 
 
 #define MAX_LOADSTRING 100
 
-// 전역 변수:
 HINSTANCE hInst;								// 현재 인스턴스입니다.
 TCHAR szTitle[MAX_LOADSTRING];					// 제목 표시줄 텍스트입니다.
 TCHAR szWindowClass[MAX_LOADSTRING];			// 기본 창 클래스 이름입니다.
@@ -43,8 +42,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	LoadString(hInstance, IDC_MINEFINDER, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
-	srand((int)time(NULL));
-	g_table.Init();
+	srand((int)time(NULL)); // 랜덤 씨앗값 초기화
+	g_table.Init();	// 지뢰 위치 설정
 
 	// 응용 프로그램 초기화를 수행합니다.
 	if (!InitInstance (hInstance, nCmdShow))
@@ -52,7 +51,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	SetTimer(g_hWnd, 0, 1, NULL);
+	SetTimer(g_hWnd, 0, 1, NULL); // 파티클 애니메이션을 위해서 타이머를 생성함.
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MINEFINDER));
 
@@ -70,20 +69,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 }
 
 
-
-//
-//  함수: MyRegisterClass()
-//
-//  목적: 창 클래스를 등록합니다.
-//
-//  설명:
-//
-//    Windows 95에서 추가된 'RegisterClassEx' 함수보다 먼저
-//    해당 코드가 Win32 시스템과 호환되도록
-//    하려는 경우에만 이 함수를 사용합니다. 이 함수를 호출해야
-//    해당 응용 프로그램에 연결된
-//    '올바른 형식의' 작은 아이콘을 가져올 수 있습니다.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
 	WNDCLASSEX wcex;
@@ -105,16 +90,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	return RegisterClassEx(&wcex);
 }
 
-//
-//   함수: InitInstance(HINSTANCE, int)
-//
-//   목적: 인스턴스 핸들을 저장하고 주 창을 만듭니다.
-//
-//   설명:
-//
-//        이 함수를 통해 인스턴스 핸들을 전역 변수에 저장하고
-//        주 프로그램 창을 만든 다음 표시합니다.
-//
+
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    HWND hWnd;
@@ -135,16 +111,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  함수: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  목적: 주 창의 메시지를 처리합니다.
-//
-//  WM_COMMAND	- 응용 프로그램 메뉴를 처리합니다.
-//  WM_PAINT	- 주 창을 그립니다.
-//  WM_DESTROY	- 종료 메시지를 게시하고 반환합니다.
-//
-//
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
@@ -175,6 +142,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		{
 			hdc = BeginPaint(hWnd, &ps);
+
 			RECT rc;
 			GetClientRect(hWnd, &rc);
 			HDC hdcMem = CreateCompatibleDC(hdc);
@@ -191,6 +159,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			SelectObject(hdcMem, hbmOld);
 			DeleteObject(hbmMem);
 			DeleteDC(hdcMem);
+
 			EndPaint(hWnd, &ps);
 		}
 		break;
