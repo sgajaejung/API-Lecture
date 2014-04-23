@@ -40,7 +40,7 @@ struct sVector
 	float x, y;
 	sVector() {}
 	sVector(float _x, float _y) : x(_x), y(_y) {}
-	sVector& operator=(const sVector &rhs)
+	sVector& operator=(const sVector &rhs) // 할당 연산자.
 	{
 		if (this != &rhs)
 		{
@@ -49,21 +49,21 @@ struct sVector
 		}
 		return *this;
 	}
-	sVector operator-(const sVector &rhs) const
+	sVector operator-(const sVector &rhs) const // - 연산자.
 	{
 		sVector v;
 		v.x = x - rhs.x;
 		v.y = y - rhs.y;
 		return v;
 	}
-	sVector operator+(const sVector &rhs) const
+	sVector operator+(const sVector &rhs) const // + 연산자
 	{
 		sVector v;
 		v.x = x + rhs.x;
 		v.y = y + rhs.y;
 		return v;
 	}
-	sVector operator*(const sVector &rhs) const
+	sVector operator*(const sVector &rhs) const // * 연산자
 	{
 		sVector v;
 		v.x = x * rhs.x;
@@ -71,21 +71,21 @@ struct sVector
 		return v;
 	}
 	template<class T>
-	sVector operator*(const T &f) const
+	sVector operator*(const T &f) const // 스칼라 곱 연산자.
 	{
 		sVector v;
 		v.x = x * f;
 		v.y = y * f;
 		return v;
 	}
-	float length() { return (float)sqrt(x*x + y*y); }
-	void normalize()
+	float length() { return (float)sqrt(x*x + y*y); } // 벡터 길이 리턴
+	void normalize() // 벡터 정규화 
 	{
 		const float L = length();
 		x /= L;
 		y /= L;
 	}
-	void interpol( const sVector &from, const sVector &to, float f )
+	void interpol( const sVector &from, const sVector &to, float f ) // 벡터 보간.
 	{
 		*this = from*(1.f-f) + to*f;
 		normalize();
@@ -93,8 +93,8 @@ struct sVector
 };
 
 
-sVector g_ballPos(300,300); // 볼 위치
-sVector g_ballVel; // 볼 속력
+//sVector g_ballPos(300,300); // 볼 위치
+//sVector g_ballVel; // 볼 속력
 
 struct sBall
 {
@@ -102,7 +102,7 @@ struct sBall
 	sVector vel;
 };
 
-sBall g_ball[ MAX_BALL];
+sBall g_ball[ MAX_BALL]; // 볼 배열.
 
 
 // Gdiplus 초기화.
@@ -208,12 +208,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    InitGdiPlus(hWnd); // Gdiplus 생성.
 
    // 초기 Ball 속도 초기화.
-   g_ballVel.x = 200;
-   g_ballVel.y = 300;
+   //g_ballVel.x = 200;
+   //g_ballVel.y = 300;
 
    // 타이머 실행.
    SetTimer(hWnd, 0, 1, NULL);
 
+   // 볼 배열 초기화.
    for (int i=0; i < MAX_BALL; ++i)
    {
 	   g_ball[ i].pos = sVector((float)i*WIDTH, (float)i*WIDTH);
@@ -314,14 +315,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					if (i == k)
 						continue;
 
+					// 볼 사이 거리가 두 구의 반지름 길이 보다 작다면 충돌 한 것이다. 
 					sVector dist = g_ball[ i].pos - g_ball[ k].pos;
-					if ((WIDTH) >= dist.length())
+					if (WIDTH >= dist.length())
 					{// collision
 						sVector dir = g_ball[ i].pos - g_ball[ k].pos;
-						dir.normalize();
+						dir.normalize(); // 볼 간의 방향 벡터 계산,  단위벡터로 초기화.
+
 						// 위치보정 (충돌 위치)
-						g_ball[ i].pos = dir * (WIDTH) + g_ball[ k].pos;
-						g_ball[ i].vel = dir * g_ball[ i].vel.length();
+						g_ball[ i].pos = dir * (WIDTH) + g_ball[ k].pos; // 서로 겹치지 않게 위치 보정
+						g_ball[ i].vel = dir * g_ball[ i].vel.length(); // 충돌 반사각 업데이트.
 					}
 				}
 			}
