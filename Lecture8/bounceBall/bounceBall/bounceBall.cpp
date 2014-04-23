@@ -5,6 +5,7 @@
 #include "bounceBall.h"
 #include <objidl.h>
 #include <gdiplus.h> 
+#include <math.h>
 using namespace Gdiplus;
 #pragma comment( lib, "gdiplus.lib" ) 
 
@@ -25,15 +26,84 @@ GdiplusStartupInput g_gdiplusStartupInput;
 ULONG_PTR g_gdiplusToken;
 Graphics *g_graphics;
 Pen *g_pen; // 펜 객체.
+Brush *g_brush; // 브러쉬 객체.
+Bitmap *g_bmp;
 
+enum {
+	WIDTH = 50,
+	MAX_BALL = 10,
+};
 
 // 2차원 벡터 구조체.
 struct sVector
 {
-	float x,y;
+	float x, y;
+	sVector() {}
+	sVector(float _x, float _y) : x(_x), y(_y) {}
+	sVector& operator=(const sVector &rhs)
+	{
+		if (this != &rhs)
+		{
+			x = rhs.x;
+			y = rhs.y;
+		}
+		return *this;
+	}
+	sVector operator-(const sVector &rhs) const
+	{
+		sVector v;
+		v.x = x - rhs.x;
+		v.y = y - rhs.y;
+		return v;
+	}
+	sVector operator+(const sVector &rhs) const
+	{
+		sVector v;
+		v.x = x + rhs.x;
+		v.y = y + rhs.y;
+		return v;
+	}
+	sVector operator*(const sVector &rhs) const
+	{
+		sVector v;
+		v.x = x * rhs.x;
+		v.y = y * rhs.y;
+		return v;
+	}
+	template<class T>
+	sVector operator*(const T &f) const
+	{
+		sVector v;
+		v.x = x * f;
+		v.y = y * f;
+		return v;
+	}
+	float length() { return (float)sqrt(x*x + y*y); }
+	void normalize()
+	{
+		const float L = length();
+		x /= L;
+		y /= L;
+	}
+	void interpol( const sVector &from, const sVector &to, float f )
+	{
+		*this = from*(1.f-f) + to*f;
+		normalize();
+	}
 };
-sVector g_ballPos = {300,300}; // 볼 위치
+
+
+sVector g_ballPos(300,300); // 볼 위치
 sVector g_ballVel; // 볼 속력
+
+struct sBall
+{
+	sVector pos;
+	sVector vel;
+};
+
+sBall g_ball[ MAX_BALL];
+
 
 // Gdiplus 초기화.
 void InitGdiPlus(HWND hWnd)
@@ -42,11 +112,17 @@ void InitGdiPlus(HWND hWnd)
 	Gdiplus::GdiplusStartup(&g_gdiplusToken, &g_gdiplusStartupInput, NULL); 
 	g_graphics = new Graphics(hWnd);
 	g_pen = new Pen(Color::Red);
+	g_brush = new SolidBrush(Color::White);
+
+	RECT cr;
+	GetClientRect(hWnd, &cr);
+	g_bmp = new Bitmap(cr.right-cr.left, cr.bottom-cr.top);
 }
 
 // Gdiplus 제거.
 void ReleaseGdiPlus()
 {
+	delete g_bmp;
 	delete g_graphics;
 	// Shutdown Gdiplus 
 	Gdiplus::GdiplusShutdown(g_gdiplusToken); 
@@ -138,6 +214,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    // 타이머 실행.
    SetTimer(hWnd, 0, 1, NULL);
 
+   for (int i=0; i < MAX_BALL; ++i)
+   {
+	   g_ball[ i].pos = sVector((float)i*WIDTH, (float)i*WIDTH);
+	   g_ball[ i].vel = sVector(200,300);
+   }
+
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -169,11 +251,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 
+	case WM_ERASEBKGND:
+		return 0;
+
 	case WM_PAINT:
-		hdc = BeginPaint(hWnd, &ps);
-		// 볼위치 g_ballPos 에 원을 출력한다.
-		g_graphics->DrawEllipse(g_pen, (int)g_ballPos.x, (int)g_ballPos.y, 100, 100);
-		EndPaint(hWnd, &ps);
+		{
+			hdc = BeginPaint(hWnd, &ps);
+
+			RECT rect;
+			GetClientRect(hWnd, &rect);
+			RectF destRect(REAL(rect.left), REAL(rect.top), REAL(rect.right-rect.left), REAL(rect.bottom-rect.top));
+
+			Graphics *graph = Graphics::FromImage(g_bmp);
+			graph->FillRectangle(g_brush, rect.left, rect.top, rect.right, rect.bottom);
+
+			// 볼위치 g_ballPos 에 원을 출력한다.
+			// 볼 출력.
+			for (int i=0; i < MAX_BALL; ++i)
+				graph->DrawEllipse(g_pen, (int)g_ball[ i].pos.x, (int)g_ball[ i].pos.y, WIDTH, WIDTH);				
+
+			g_graphics->DrawImage(g_bmp, destRect);
+
+			EndPaint(hWnd, &ps);
+		}
 		break;
 
 	case WM_TIMER:
@@ -192,20 +292,39 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			RECT cr;
 			GetClientRect(hWnd, &cr); // 뷰 영역 크기를 얻는다.
 
-			// left, right 충돌 검사, 충돌 했다면 x축 속도 반전.
-			if (((g_ballVel.x < 0) && (cr.left > (int)g_ballPos.x)) || 
-				((g_ballVel.x > 0) && (cr.right < (int)g_ballPos.x)))
-				g_ballVel.x = -g_ballVel.x;
+			for (int i=0; i < MAX_BALL; ++i)
+			{
+				// left, right 충돌 검사, 충돌 했다면 x축 속력 반전.
+				if (((g_ball[ i].vel.x < 0) && (cr.left > (int)g_ball[ i].pos.x)) || 
+					((g_ball[ i].vel.x > 0) && (cr.right < (int)g_ball[ i].pos.x+WIDTH)))
+					g_ball[ i].vel.x = -g_ball[ i].vel.x;
 
-			// top, bottom 충돌 검사, 충돌 했다면 y축 속도 반전.
-			if (((g_ballVel.y < 0) && (cr.top > (int)g_ballPos.y)) || 
-				((g_ballVel.y  > 0) && (cr.bottom < (int)g_ballPos.y)))
-				g_ballVel.y = -g_ballVel.y;
+				// top, bottom 충돌 검사, 충돌 했다면 y축 속력 반전.
+				if (((g_ball[ i].vel.y < 0) && (cr.top > (int)g_ball[ i].pos.y)) || 
+					((g_ball[ i].vel.y  > 0) && (cr.bottom < (int)g_ball[ i].pos.y+WIDTH)))
+					g_ball[ i].vel.y = -g_ball[ i].vel.y;
 
-			// 속도 * 경과시간 = 이동 거리.
-			// 볼위치 g_ballPos 에 이동 거리 만큼 값을 추가한다.
-			g_ballPos.x += g_ballVel.x * eT;
-			g_ballPos.y += g_ballVel.y * eT;
+				// 속도 * 경과시간 = 이동 거리.
+				// 볼위치 g_ballPos 에 이동 거리 만큼 값을 추가한다.
+				g_ball[ i].pos.x += g_ball[ i].vel.x * eT;
+				g_ball[ i].pos.y += g_ball[ i].vel.y * eT;
+
+				for (int k=0; k < MAX_BALL; ++k)
+				{
+					if (i == k)
+						continue;
+
+					sVector dist = g_ball[ i].pos - g_ball[ k].pos;
+					if ((WIDTH) >= dist.length())
+					{// collision
+						sVector dir = g_ball[ i].pos - g_ball[ k].pos;
+						dir.normalize();
+						// 위치보정 (충돌 위치)
+						g_ball[ i].pos = dir * (WIDTH) + g_ball[ k].pos;
+						g_ball[ i].vel = dir * g_ball[ i].vel.length();
+					}
+				}
+			}
 
 			// 화면 리프레쉬
 			::InvalidateRect(hWnd, NULL, TRUE);

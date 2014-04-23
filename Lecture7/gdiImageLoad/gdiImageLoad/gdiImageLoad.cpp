@@ -47,7 +47,7 @@ void initGdiPlus(HWND hWnd)
 	RECT cr;
 	GetClientRect(hWnd, &cr);
 	g_bmp = new Bitmap(cr.right-cr.left, cr.bottom-cr.top);
-}
+ }
 
 
 void releaseGdiPlus()
