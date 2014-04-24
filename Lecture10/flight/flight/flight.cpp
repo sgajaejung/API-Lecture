@@ -10,7 +10,9 @@ using namespace Gdiplus;
 
 #include <vector>
 #include "particle.h"
+#include "utility.h"
 using std::vector;
+using namespace utility;
 
 #define MAX_LOADSTRING 100
 
@@ -34,12 +36,17 @@ int g_front = 0;
 int g_back = 0;
 cParticleManager g_particleMng;
 
+vector<sVector> g_bezier;
+float g_bezierT = 0;
+Rect g_bezierRect(0,0,10,30);
+
+
 enum GAME_MODE
 {
 	SHOOTING,
 	RACING,
 };
-GAME_MODE g_mode = RACING;
+GAME_MODE g_mode = SHOOTING;
 
 
 // 이 코드 모듈에 들어 있는 함수의 정방향 선언입니다.
@@ -202,6 +209,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   g_bullets[ 1] = Rect(cr.right/2 + 100, 0, 10, 30);
    }
 
+   g_bezier.push_back( sVector(0,0) );
+   g_bezier.push_back( sVector(cr.right,100) );
+   g_bezier.push_back( sVector(0,cr.bottom) );
+   g_bezier.push_back( sVector(cr.right, cr.bottom) );
+
+
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -259,6 +272,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			for (int i=0; i < (int)g_bullets.size(); ++i)
 				graph->FillRectangle(g_bulletBrush, g_bullets[ i]);
+
+			graph->FillRectangle(g_bulletBrush, g_bezierRect);
 
 			graph->FillRectangle(g_brush, g_hero);
 			g_graphics->DrawImage(g_bmp, wndSize);
@@ -356,6 +371,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			const int curT = GetTickCount();
 			const int elapseT = curT - oldT;
 			oldT = curT;
+
+			const float eT = (float)elapseT/1000.f;
+			g_bezierT += eT/10.f;
+			sVector bpos;
+			utility::bezier(bpos, g_bezier, g_bezierT);
+
+			g_bezierRect.X = (int)bpos.x;
+			g_bezierRect.Y = (int)bpos.y;
+
+			if (g_bezierT > 1.f)
+				g_bezierT = 0;
+
 
 			g_particleMng.Move(elapseT);
 			::InvalidateRect(hWnd, NULL, TRUE);
