@@ -1,8 +1,8 @@
-// DisplayTree.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
+// DisplayUI.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
 //
 
 #include "stdafx.h"
-#include "DisplayTree.h"
+#include "DisplayUI.h"
 #include <objidl.h>
 #include <gdiplus.h> 
 using namespace Gdiplus;
@@ -12,13 +12,18 @@ using namespace Gdiplus;
 #include <string>
 using namespace std;
 
-
 #define MAX_LOADSTRING 100
 
 // 전역 변수:
 HINSTANCE hInst;								// 현재 인스턴스입니다.
 TCHAR szTitle[MAX_LOADSTRING];					// 제목 표시줄 텍스트입니다.
 TCHAR szWindowClass[MAX_LOADSTRING];			// 기본 창 클래스 이름입니다.
+
+// 이 코드 모듈에 들어 있는 함수의 정방향 선언입니다.
+ATOM				MyRegisterClass(HINSTANCE hInstance);
+BOOL				InitInstance(HINSTANCE, int);
+LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
 
 // Gdiplus 용 
@@ -34,25 +39,21 @@ Brush *g_brush; // 브러쉬 객체.
 struct sNode
 {
 	sNode() {}
-	sNode(const wstring &_name, sNode *_child1=NULL, sNode *_child2=NULL) :
-		name(_name), child1(_child1), child2(_child2)
+	sNode(int type0, const wstring &_name, const Rect &r, sNode *_child1=NULL, sNode *_child2=NULL) :
+	type(type0), name(_name), rect(r), child1(_child1), child2(_child2)
 	{
 	}
 
+	int type; // 노드 타입
 	wstring name; // 노드 이름
+	Rect rect; // 노드 위치 (상대좌표)
+
 	sNode *child1; // 자식 노드1
 	sNode *child2; // 자식 노드2
 };
 
 sNode *g_root = NULL;
 
-
-
-// 이 코드 모듈에 들어 있는 함수의 정방향 선언입니다.
-ATOM				MyRegisterClass(HINSTANCE hInstance);
-BOOL				InitInstance(HINSTANCE, int);
-LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
 
 
@@ -78,26 +79,17 @@ void ReleaseGdiPlus()
 
 
 // UI Node 출력.
-Point Display(sNode *node, const Point &parentPos, const Point &pos)
+void Display(sNode *parent, sNode *node, const Point &offset = Point(0,0))
 {
-	const Rect NodeSize(0,0,60,50);
-	const Point NodeGap(40, 20);
-
 	if (!node)
-		return parentPos+Point(NodeSize.Width, NodeSize.Height);
+		return;
 
-	Rect r = NodeSize;
-	r.Offset(pos);
+	Rect r = node->rect;
+	r.Offset(offset);
 	g_graphics->DrawRectangle(g_pen, r);
 
-	if ((parentPos.X != -1) && (parentPos.Y != -1))
-	{
-		Point lineOffset(r.Width/2, r.Height);
-		g_graphics->DrawLine(g_pen, parentPos+lineOffset, pos+lineOffset+Point(0,-r.Height));
-	}
-
 	// Initialize arguments.
-	Font myFont(L"Arial", 12);
+	Font myFont(L"Arial", 16);
 	StringFormat format;
 	format.SetAlignment(StringAlignmentCenter);
 	SolidBrush blackBrush(Color(255, 0, 0, 0));
@@ -106,20 +98,9 @@ Point Display(sNode *node, const Point &parentPos, const Point &pos)
 	g_graphics->DrawString( node->name.c_str(), -1, &myFont,
 		RectF((REAL)r.X, (REAL)r.Y, (REAL)r.Width, (REAL)r.Height), &format, &blackBrush);
 
-
 	// 자식 노드 출력.
-	const Point leftNodePos = pos+Point(0, NodeSize.Height+NodeGap.Y);
-	const Point cPos1 = Display(node->child1, pos, leftNodePos);
-	
-	Point rightNodePos = pos+Point(NodeSize.Width+NodeGap.X, NodeSize.Height+NodeGap.Y);
-	if (cPos1.X > rightNodePos.X)
-		rightNodePos.X = cPos1.X + NodeGap.X;
-
-	const Point cPos2 = Display(node->child2, pos, rightNodePos);
-	if (cPos2.X < cPos1.X)
-		return cPos1;
-
-	return cPos2;
+	Display(node, node->child1, Point(r.X, r.Y));
+	Display(node, node->child2, Point(r.X, r.Y));
 }
 
 
@@ -137,7 +118,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	// 전역 문자열을 초기화합니다.
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-	LoadString(hInstance, IDC_DISPLAYTREE, szWindowClass, MAX_LOADSTRING);
+	LoadString(hInstance, IDC_DISPLAYUI, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
 	// 응용 프로그램 초기화를 수행합니다.
@@ -146,7 +127,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DISPLAYTREE));
+	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DISPLAYUI));
 
 	// 기본 메시지 루프입니다.
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -159,6 +140,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	}
 
 	ReleaseGdiPlus();
+
 	return (int) msg.wParam;
 }
 
@@ -188,10 +170,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	wcex.cbClsExtra		= 0;
 	wcex.cbWndExtra		= 0;
 	wcex.hInstance		= hInstance;
-	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DISPLAYTREE));
+	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DISPLAYUI));
 	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_DISPLAYTREE);
+	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_DISPLAYUI);
 	wcex.lpszClassName	= szWindowClass;
 	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -225,15 +207,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    InitGdiPlus(hWnd);
 
    // UI Node 생성.
-   g_root = new sNode(L"0",
-	   new sNode(L"1", 
-		new sNode(L"2"),
-		new sNode(L"3")),
-	   new sNode(L"4",
-		new sNode(L"5"),
-		new sNode(L"6"))
+   g_root = new sNode(0, L"Window", Rect(100,100,200,150),
+	   new sNode(1, L"Btn", Rect(10, 50, 100, 50))
 	   );
-
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -277,7 +253,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
-		Display(g_root, Point(-1,-1), Point(300,50));
+		Display(NULL, g_root, Point(100,100));
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_DESTROY:
