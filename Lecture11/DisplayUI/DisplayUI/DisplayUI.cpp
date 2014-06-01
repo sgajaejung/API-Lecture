@@ -104,6 +104,30 @@ void Display(sNode *parent, sNode *node, const Point &offset = Point(0,0))
 }
 
 
+sNode* Check(sNode *node, const Point &mousePos, const Point &offset = Point(0,0))
+{
+	if (!node)
+		return NULL;
+
+	Rect r = node->rect;
+	r.Offset(offset);
+
+	// 자식 노드 출력.
+	sNode *node1 = Check(node->child1, mousePos, Point(r.X, r.Y));
+	if (node1)
+		return node1;
+
+	sNode *node2 = Check(node->child2, mousePos, Point(r.X, r.Y));
+	if (node2)
+		return node2;
+
+	if (r.Contains(mousePos))
+		return node;
+
+	return NULL;
+}
+
+
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPTSTR    lpCmdLine,
@@ -256,6 +280,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		Display(NULL, g_root, Point(100,100));
 		EndPaint(hWnd, &ps);
 		break;
+
+	case WM_MOUSEMOVE:
+		{
+			Point pos(LOWORD(lParam), HIWORD(lParam));
+			if (sNode *ui = Check(g_root, pos, Point(100,100)))
+			{
+				::MessageBox(hWnd, ui->name.c_str(), L"ok", MB_OK);
+			}
+		}
+		break;
+
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
